@@ -1,0 +1,16 @@
+{
+    "name": "llm-response-mcp",
+    "version": "1.0.0",
+    "description": "MCP server for handling LLM responses via temporary files to save credits",
+    "type": "module",
+    "main": "index.ts",
+    "scripts": {
+        "start": "bun run index.ts",
+        "dev": "bun --watch index.ts"
+    },
+    "devDependencies": {
+        "@types/bun": "latest"
+    },
+    "keywords": ["mcp", "llm", "windsurf", "bun"],
+    "license": "MIT"
+}
