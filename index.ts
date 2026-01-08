@@ -9,7 +9,7 @@ import { watch } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
-const INPUT_FILE = join(tmpdir(), "windsurf_user_input.txt");
+const INPUT_FILE = join(tmpdir(), "windsurf_user_input.md");
 
 interface WaitResult {
   status: string;
@@ -43,9 +43,11 @@ class UserInputServer {
     await this.init();
 
     // Write history to file so user can see previous messages
-    const historyText = this.history.length > 0 
-      ? this.history.join("\n") + "\n\n--- Type your message below (end with //SEND to submit) ---\n\n"
-      : "--- Type your message below (end with //SEND to submit) ---\n\n";
+    const historySection = this.history.length > 0 
+      ? `## Conversation History\n\n${this.history.join("\n\n")}\n\n---\n\n`
+      : "";
+    const instructions = `## Your Message\n\nType your message below. End with \`//SEND\` to submit.\n\n\`\`\`\n\n//SEND\n\`\`\``;
+    const historyText = historySection + instructions;
     await writeFile(this.inputFile, historyText);
 
     console.error(`\n📝 Waiting for user input in: ${this.inputFile}`);
@@ -64,23 +66,19 @@ class UserInputServer {
             const trimmed = content.trim();
 
             if (trimmed) {
-              // Check for the //SEND marker at the end
-              const sendMarker = "//SEND";
-              if (!trimmed.toUpperCase().endsWith(sendMarker)) {
+              // Check for the //SEND marker (either at end or before closing ```)
+              const hasSendMarker = /\/\/SEND\s*```?\s*$/i.test(trimmed);
+              if (!hasSendMarker) {
                 // User hasn't signaled they're done yet
                 return;
               }
 
-              // Extract only the new message (after the separator, if present)
-              const separator = "--- Type your message below (end with //SEND to submit) ---";
-              let userMessage = trimmed;
-              
-              if (trimmed.includes(separator)) {
-                userMessage = trimmed.split(separator).pop()?.trim() || "";
-              }
-              
-              // Remove the //SEND marker from the message
-              userMessage = userMessage.replace(/\/\/SEND$/i, "").trim();
+              // Extract user message from the code block
+              // Look for content between ``` and //SEND
+              const codeBlockMatch = trimmed.match(/```\s*([\s\S]*?)\/\/SEND\s*```/i);
+              let userMessage = codeBlockMatch 
+                ? codeBlockMatch[1].trim()
+                : trimmed.replace(/\/\/SEND\s*```?\s*$/i, "").trim();
               
               if (userMessage) {
                 watcher.close();
