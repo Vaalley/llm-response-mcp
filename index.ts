@@ -44,12 +44,12 @@ class UserInputServer {
 
     // Write history to file so user can see previous messages
     const historyText = this.history.length > 0 
-      ? this.history.join("\n") + "\n\n--- Type your message below ---\n\n"
-      : "";
+      ? this.history.join("\n") + "\n\n--- Type your message below (end with //SEND to submit) ---\n\n"
+      : "--- Type your message below (end with //SEND to submit) ---\n\n";
     await writeFile(this.inputFile, historyText);
 
     console.error(`\n📝 Waiting for user input in: ${this.inputFile}`);
-    console.error(`   Write your message and save the file.\n`);
+    console.error(`   Write your message and end with //SEND to submit.\n`);
 
     // Open the file in Windsurf/VS Code automatically
     this.openInEditor();
@@ -64,13 +64,23 @@ class UserInputServer {
             const trimmed = content.trim();
 
             if (trimmed) {
+              // Check for the //SEND marker at the end
+              const sendMarker = "//SEND";
+              if (!trimmed.toUpperCase().endsWith(sendMarker)) {
+                // User hasn't signaled they're done yet
+                return;
+              }
+
               // Extract only the new message (after the separator, if present)
-              const separator = "--- Type your message below ---";
+              const separator = "--- Type your message below (end with //SEND to submit) ---";
               let userMessage = trimmed;
               
               if (trimmed.includes(separator)) {
                 userMessage = trimmed.split(separator).pop()?.trim() || "";
               }
+              
+              // Remove the //SEND marker from the message
+              userMessage = userMessage.replace(/\/\/SEND$/i, "").trim();
               
               if (userMessage) {
                 watcher.close();
